@@ -12,5 +12,7 @@ router.get("/", jwtMiddleware, accountsController.listAccounts);
 router.get("/:accountid", jwtMiddleware, accountsController.getAccountDetail);
 // Cambiar estado de cuenta
 router.post("/:accountid/status", jwtMiddleware, accountsController.setAccountStatus);
+// Agregar esta línea con las demás rutas
+router.get("/:accountid/movements", jwtMiddleware, accountsController.listAccountMovements);
 
 module.exports = router;
