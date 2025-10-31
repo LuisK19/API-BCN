@@ -86,10 +86,10 @@ node-rest-api/
 | GET    | /api/v1/users/:identification| Consultar usuario por identificación | sp_users_get_by_identification | ✅ |
 | PUT    | /api/v1/users/:id            | Actualizar usuario               | sp_users_update | ✅ |
 | DELETE | /api/v1/users/:id            | Eliminar usuario                 | sp_users_delete | ✅ |
-| POST   | /api/v1/accounts             | Crear cuenta bancaria            | sp_accounts_create |  |
-| GET    | /api/v1/accounts             | Listar cuentas de usuario        | sp_accounts_get |  |
-| GET    | /api/v1/accounts/:accountid  | Consultar detalle de cuenta      | sp_accounts_get |  |
-| POST   | /api/v1/accounts/:accountid/status | Cambiar estado de cuenta  | sp_accounts_set_status |  |
+| POST   | /api/v1/accounts             | Crear cuenta bancaria            | sp_accounts_create | ✅ |
+| GET    | /api/v1/accounts             | Listar cuentas de usuario        | sp_accounts_get | ✅ |
+| GET    | /api/v1/accounts/:accountid  | Consultar detalle de cuenta      | sp_accounts_get | ✅ |
+| POST   | /api/v1/accounts/:accountid/status | Cambiar estado de cuenta  | sp_accounts_set_status | ✅ |
 | GET    | /api/v1/accounts/:accountid/movements | Listar movimientos de cuenta | sp_account_movements_list |  |
 | POST   | /api/v1/transfers/internal   | Transferencia interna            | sp_transfer_create_internal |  |
 | POST   | /api/v1/cards                | Crear tarjeta                    | sp_cards_create |  |
@@ -175,3 +175,39 @@ sp_accounts_set_status
 sp_cards_create
 sp_cards_update_status
 sp_users_change_password
+
+
+# Producción
+PROD_NODE_ENV=production
+PROD_JWT_SECRET=clave_secreta_produccion_muy_segura
+PROD_API_KEY=api_key_produccion
+PROD_DB_USER=user_bcn
+PROD_DB_HOST=134.199.141.222
+PROD_DB_PORT=15434
+PROD_DB_NAME=fecr_bcn
+PROD_DB_PASSWORD=Kt4!mX12vE
+PROD_DB_SSL=false
+
+JWT_SECRET=Qp9!vT$2zX@7rLw#sD8eF6gH1jK4mN0bC5uY3aZxWqE7tR9pS
+
+
+
+No, esto está corriendo solo en tu máquina local (localhost) usando el emulador de Firebase.  
+No está disponible en línea ni accesible desde fuera de tu red.
+
+**Para publicar tu API en línea:**
+1. Debes desplegar tus funciones a Firebase con:
+   ```powershell
+   firebase deploy --only functions
+   ```
+2. Después del despliegue, Firebase te dará una URL pública para tus endpoints.
+
+¿Quieres que te guíe en el proceso de despliegue?
+
+
+
+https://us-central1-api-banco-web.cloudfunctions.net/api/api/v1/health
+
+
+pasa generar iban:
+node scripts/generar-iban-terminal.js

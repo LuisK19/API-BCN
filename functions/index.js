@@ -17,6 +17,7 @@ dotenv.config();
 
 const authRoutes = require("./routes/auth");
 const usersRoutes = require("./routes/users");
+const accountsRoutes = require("./routes/accounts");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 
 const app = express();
@@ -30,8 +31,9 @@ app.use(express.json());
 
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", usersRoutes);
+app.use("/api/v1/accounts", accountsRoutes);
+
 /**
- * app.use("/api/v1/accounts", accountsRoutes);
  * app.use("/api/v1/cards", cardsRoutes);
  * app.use("/api/v1/transfers", transfersRoutes);
  */
