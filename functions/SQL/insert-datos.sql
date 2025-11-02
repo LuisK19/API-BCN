@@ -3,27 +3,27 @@
 -- Para Create-Ane.sql
 -- ====================================
 
--- PROPÓSITO:
+-- PROPoSITO:
 -- Este script inserta datos de prueba para simular un ambiente bancario funcional
 -- con usuarios, cuentas, tarjetas y transacciones de ejemplo.
 
 -- PREREQUISITOS:
 -- 1. La base de datos debe estar creada y con su esquema definido (create-ane.sql)
--- 2. Las tablas de catálogo deben estar pobladas con los datos base
+-- 2. Las tablas de catalogo deben estar pobladas con los datos base
 -- 3. No debe existir conflicto con datos existentes (IDs, usuarios, etc.)
 
 -- ESTRUCTURA DEL SCRIPT:
 -- 1. API Key de prueba para desarrollo
 -- 2. Usuario administrador y tres usuarios cliente con diferentes perfiles
 -- 3. Cuentas bancarias en diferentes monedas (CRC y USD)
--- 4. Tarjetas de crédito de diferentes categorías
--- 5. Movimientos de cuenta (débitos y créditos)
+-- 4. Tarjetas de credito de diferentes categorias
+-- 5. Movimientos de cuenta (debitos y creditos)
 -- 6. Movimientos de tarjeta (compras y pagos)
 
 -- NOTAS DE SEGURIDAD:
--- - Las contraseñas están hasheadas usando bcrypt (costo=12)
--- - Los números de tarjeta están enmascarados (solo últimos 4 dígitos visibles)
--- - CVV y PIN están hasheados, nunca en texto plano
+-- - Las contraseñas estan hasheadas usando bcrypt (costo=12)
+-- - Los numeros de tarjeta estan enmascarados (solo ultimos 4 digitos visibles)
+-- - CVV y PIN estan hasheados, nunca en texto plano
 -- - La API Key de prueba solo debe usarse en ambiente de desarrollo
 
 -- ====================================
@@ -70,7 +70,7 @@ INSERT INTO usuario (
     'active'
 );
 
--- Usuario Cliente 1: Juan Pérez
+-- Usuario Cliente 1: Juan Perez
 -- Username: juanperez
 -- Password: Juan123!
 -- Hash bcrypt: $2b$10$aH5VqKvZ8yKzX9mP3nQ0xO5JYvZ8Y9X0Z1Z2Z3Z4Z5Z6Z7Z8Z9Z1A
@@ -91,8 +91,8 @@ INSERT INTO usuario (
     (SELECT id FROM tipoIdentificacion WHERE nombre = 'Nacional'),
     '1-2345-6789',
     'Juan',
-    'Pérez',
-    'Rodríguez',
+    'Perez',
+    'Rodriguez',
     'juan.perez@email.com',
     '8888-1234',
     'juanperez',
@@ -102,7 +102,7 @@ INSERT INTO usuario (
     'active'
 );
 
--- Usuario Cliente 2: María González
+-- Usuario Cliente 2: Maria Gonzalez
 -- Username: mariagonzalez
 -- Password: Maria123!
 -- Hash bcrypt: $2b$10$bH5VqKvZ8yKzX9mP3nQ0xO5JYvZ8Y9X0Z1Z2Z3Z4Z5Z6Z7Z8Z9Z2B
@@ -122,9 +122,9 @@ INSERT INTO usuario (
 ) VALUES (
     (SELECT id FROM tipoIdentificacion WHERE nombre = 'Nacional'),
     '2-3456-7890',
-    'María',
-    'González',
-    'Jiménez',
+    'Maria',
+    'Gonzalez',
+    'Jimenez',
     'maria.gonzalez@email.com',
     '8888-5678',
     'mariagonzalez',
@@ -134,7 +134,7 @@ INSERT INTO usuario (
     'active'
 );
 
--- Usuario Cliente 3: Carlos Ramírez (DIMEX)
+-- Usuario Cliente 3: Carlos Ramirez (DIMEX)
 -- Username: carlosramirez
 -- Password: Carlos123!
 -- Hash bcrypt: $2b$10$cH5VqKvZ8yKzX9mP3nQ0xO5JYvZ8Y9X0Z1Z2Z3Z4Z5Z6Z7Z8Z9Z3C
@@ -155,8 +155,8 @@ INSERT INTO usuario (
     (SELECT id FROM tipoIdentificacion WHERE nombre = 'DIMEX'),
     '123456789012',
     'Carlos',
-    'Ramírez',
-    'López',
+    'Ramirez',
+    'Lopez',
     'carlos.ramirez@email.com',
     '8888-9012',
     'carlosramirez',
@@ -170,7 +170,7 @@ INSERT INTO usuario (
 -- 3. CUENTAS BANCARIAS
 -- ====================================
 
--- Cuenta de Juan Pérez - Ahorro en Colones
+-- Cuenta de Juan Perez - Ahorro en Colones
 INSERT INTO cuenta (
     usuario_id,
     iban,
@@ -189,7 +189,7 @@ INSERT INTO cuenta (
     (SELECT id FROM estadoCuenta WHERE nombre = 'Activa')
 );
 
--- Cuenta de Juan Pérez - Ahorro en Dólares
+-- Cuenta de Juan Perez - Ahorro en Dolares
 INSERT INTO cuenta (
     usuario_id,
     iban,
@@ -208,7 +208,7 @@ INSERT INTO cuenta (
     (SELECT id FROM estadoCuenta WHERE nombre = 'Activa')
 );
 
--- Cuenta de María González - Corriente en Colones
+-- Cuenta de Maria Gonzalez - Corriente en Colones
 INSERT INTO cuenta (
     usuario_id,
     iban,
@@ -227,7 +227,7 @@ INSERT INTO cuenta (
     (SELECT id FROM estadoCuenta WHERE nombre = 'Activa')
 );
 
--- Cuenta de María González - Ahorro en Dólares
+-- Cuenta de Maria Gonzalez - Ahorro en Dolares
 INSERT INTO cuenta (
     usuario_id,
     iban,
@@ -239,14 +239,14 @@ INSERT INTO cuenta (
 ) VALUES (
     (SELECT id FROM usuario WHERE identificacion = '2-3456-7890'),
     'CR12015201001026284069',
-    'Ahorros Dólares',
+    'Ahorros Dolares',
     (SELECT id FROM tipoCuenta WHERE nombre = 'Ahorros'),
     (SELECT id FROM moneda WHERE iso = 'USD'),
     10000.00,
     (SELECT id FROM estadoCuenta WHERE nombre = 'Activa')
 );
 
--- Cuenta de Carlos Ramírez - Ahorro en Colones
+-- Cuenta de Carlos Ramirez - Ahorro en Colones
 INSERT INTO cuenta (
     usuario_id,
     iban,
@@ -266,12 +266,12 @@ INSERT INTO cuenta (
 );
 
 -- ====================================
--- 4. TARJETAS DE CRÉDITO
+-- 4. TARJETAS DE CReDITO
 -- ====================================
 
--- Tarjeta PLATINUM de Juan Pérez
--- CVV: 123 -> Hash: $2b$12$s8i/qA6S9H0lIC/9xe9jD.XjfhmA1F0bNMCr3z.r5QxvW/ipNVMoi
--- PIN: 1234 -> Hash: $2b$12$OJiSYr8iiMiwgTdIuqZlMe1CG4Giqt8BGGGk60oZs4II.amkMbTBq
+-- Tarjeta PLATINUM de Juan Perez
+-- CVV: 987 -> Encriptado AES-256-CBC
+-- PIN: 2345 -> Encriptado AES-256-CBC
 INSERT INTO tarjeta (
     usuario_id,
     tipo,
@@ -291,9 +291,9 @@ INSERT INTO tarjeta (
     estado
 ) VALUES (
     (SELECT id FROM usuario WHERE identificacion = '1-2345-6789'),
-    (SELECT id FROM tipoTarjeta WHERE nombre = 'Crédito'),
+    (SELECT id FROM tipoTarjeta WHERE nombre = 'Credito'),
     '4532 **** **** 1234',
-    'Juan Pérez Rodríguez',
+    'Juan Perez Rodriguez',
     '12/28',
     '$2b$12$s8i/qA6S9H0lIC/9xe9jD.XjfhmA1F0bNMCr3z.r5QxvW/ipNVMoi',
     '$2b$12$OJiSYr8iiMiwgTdIuqZlMe1CG4Giqt8BGGGk60oZs4II.amkMbTBq',
@@ -308,7 +308,9 @@ INSERT INTO tarjeta (
     'Activa'
 );
 
--- Tarjeta GOLD de Juan Pérez
+-- Tarjeta GOLD de Juan Perez
+-- CVV: 123 -> Encriptado AES-256-CBC
+-- PIN: 1234 -> Encriptado AES-256-CBC
 INSERT INTO tarjeta (
     usuario_id,
     tipo,
@@ -328,9 +330,9 @@ INSERT INTO tarjeta (
     estado
 ) VALUES (
     (SELECT id FROM usuario WHERE identificacion = '1-2345-6789'),
-    (SELECT id FROM tipoTarjeta WHERE nombre = 'Crédito'),
+    (SELECT id FROM tipoTarjeta WHERE nombre = 'Credito'),
     '5425 **** **** 5678',
-    'Juan Pérez Rodríguez',
+    'Juan Perez Rodriguez',
     '06/27',
     '$2b$12$s8i/qA6S9H0lIC/9xe9jD.XjfhmA1F0bNMCr3z.r5QxvW/ipNVMoi',
     '$2b$12$OJiSYr8iiMiwgTdIuqZlMe1CG4Giqt8BGGGk60oZs4II.amkMbTBq',
@@ -345,7 +347,9 @@ INSERT INTO tarjeta (
     'Activa'
 );
 
--- Tarjeta BLACK de María González
+-- Tarjeta BLACK de Maria Gonzalez
+-- CVV: 456 -> Encriptado AES-256-CBC
+-- PIN: 5678 -> Encriptado AES-256-CBC
 INSERT INTO tarjeta (
     usuario_id,
     tipo,
@@ -365,9 +369,9 @@ INSERT INTO tarjeta (
     estado
 ) VALUES (
     (SELECT id FROM usuario WHERE identificacion = '2-3456-7890'),
-    (SELECT id FROM tipoTarjeta WHERE nombre = 'Crédito'),
+    (SELECT id FROM tipoTarjeta WHERE nombre = 'Credito'),
     '3782 **** **** 9012',
-    'María González Jiménez',
+    'Maria Gonzalez Jimenez',
     '03/29',
     '$2b$12$s8i/qA6S9H0lIC/9xe9jD.XjfhmA1F0bNMCr3z.r5QxvW/ipNVMoi',
     '$2b$12$OJiSYr8iiMiwgTdIuqZlMe1CG4Giqt8BGGGk60oZs4II.amkMbTBq',
@@ -382,7 +386,9 @@ INSERT INTO tarjeta (
     'Activa'
 );
 
--- Tarjeta BLUE de María González
+-- Tarjeta BLUE de Maria Gonzalez
+-- CVV: 789 -> Encriptado AES-256-CBC
+-- PIN: 9012 -> Encriptado AES-256-CBC
 INSERT INTO tarjeta (
     usuario_id,
     tipo,
@@ -402,9 +408,9 @@ INSERT INTO tarjeta (
     estado
 ) VALUES (
     (SELECT id FROM usuario WHERE identificacion = '2-3456-7890'),
-    (SELECT id FROM tipoTarjeta WHERE nombre = 'Crédito'),
+    (SELECT id FROM tipoTarjeta WHERE nombre = 'Credito'),
     '4111 **** **** 3456',
-    'María González Jiménez',
+    'Maria Gonzalez Jimenez',
     '09/26',
     '$2b$12$s8i/qA6S9H0lIC/9xe9jD.XjfhmA1F0bNMCr3z.r5QxvW/ipNVMoi',
     '$2b$12$OJiSYr8iiMiwgTdIuqZlMe1CG4Giqt8BGGGk60oZs4II.amkMbTBq',
@@ -419,7 +425,9 @@ INSERT INTO tarjeta (
     'Activa'
 );
 
--- Tarjeta SAPRISA de Carlos Ramírez
+-- Tarjeta SAPRISA de Carlos Ramirez
+-- CVV: 321 -> Encriptado AES-256-CBC
+-- PIN: 3456 -> Encriptado AES-256-CBC
 INSERT INTO tarjeta (
     usuario_id,
     tipo,
@@ -439,9 +447,9 @@ INSERT INTO tarjeta (
     estado
 ) VALUES (
     (SELECT id FROM usuario WHERE identificacion = '123456789012'),
-    (SELECT id FROM tipoTarjeta WHERE nombre = 'Crédito'),
+    (SELECT id FROM tipoTarjeta WHERE nombre = 'Credito'),
     '5200 **** **** 7890',
-    'Carlos Ramírez López',
+    'Carlos Ramirez Lopez',
     '11/27',
     '$2b$12$s8i/qA6S9H0lIC/9xe9jD.XjfhmA1F0bNMCr3z.r5QxvW/ipNVMoi',
     '$2b$12$OJiSYr8iiMiwgTdIuqZlMe1CG4Giqt8BGGGk60oZs4II.amkMbTBq',
@@ -460,7 +468,7 @@ INSERT INTO tarjeta (
 -- 5. MOVIMIENTOS DE CUENTA
 -- ====================================
 
--- Movimientos cuenta de Juan Pérez (Colones)
+-- Movimientos cuenta de Juan Perez (Colones)
 INSERT INTO movimientoCuenta (
     cuenta_id,
     fecha,
@@ -476,41 +484,41 @@ INSERT INTO movimientoCuenta (
 (
     (SELECT id FROM cuenta WHERE iban = 'CR12015201001026284066'),
     NOW() - INTERVAL '5 days',
-    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Crédito'),
-    'Depósito en efectivo',
+    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Credito'),
+    'Deposito en efectivo',
     (SELECT id FROM moneda WHERE iso = 'CRC'),
     500000.00,
     NULL,
-    'Depósito',
-    'Sucursal Central San José',
+    'Deposito',
+    'Sucursal Central San Jose',
     'DEP-001'
 ),
 (
     (SELECT id FROM cuenta WHERE iban = 'CR12015201001026284066'),
     NOW() - INTERVAL '3 days',
-    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Débito'),
-    'Pago servicios públicos',
+    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Debito'),
+    'Pago servicios publicos',
     (SELECT id FROM moneda WHERE iso = 'CRC'),
     -75000.00,
     'ICE',
     'Servicios',
-    'En línea',
+    'En linea',
     'PAG-002'
 ),
 (
     (SELECT id FROM cuenta WHERE iban = 'CR12015201001026284066'),
     NOW() - INTERVAL '1 day',
-    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Débito'),
+    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Debito'),
     'Compra supermercado',
     (SELECT id FROM moneda WHERE iso = 'CRC'),
     -125000.00,
     'Automercado',
     'Supermercado',
-    'Escazú',
+    'Escazu',
     'COM-003'
 );
 
--- Movimientos cuenta de María González (Colones)
+-- Movimientos cuenta de Maria Gonzalez (Colones)
 INSERT INTO movimientoCuenta (
     cuenta_id,
     fecha,
@@ -525,7 +533,7 @@ INSERT INTO movimientoCuenta (
 (
     (SELECT id FROM cuenta WHERE iban = 'CR12015201001026284068'),
     NOW() - INTERVAL '7 days',
-    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Crédito'),
+    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Credito'),
     'Transferencia recibida salario',
     (SELECT id FROM moneda WHERE iso = 'CRC'),
     1200000.00,
@@ -536,7 +544,7 @@ INSERT INTO movimientoCuenta (
 (
     (SELECT id FROM cuenta WHERE iban = 'CR12015201001026284068'),
     NOW() - INTERVAL '2 days',
-    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Débito'),
+    (SELECT id FROM tipoMovimientoCuenta WHERE nombre = 'Debito'),
     'Pago alquiler',
     (SELECT id FROM moneda WHERE iso = 'CRC'),
     -400000.00,
@@ -549,7 +557,7 @@ INSERT INTO movimientoCuenta (
 -- 6. MOVIMIENTOS DE TARJETA
 -- ====================================
 
--- Movimientos tarjeta PLATINUM de Juan Pérez
+-- Movimientos tarjeta PLATINUM de Juan Perez
 INSERT INTO movimientoTarjeta (
     tarjeta_id,
     fecha,
@@ -565,11 +573,11 @@ INSERT INTO movimientoTarjeta (
     (SELECT id FROM tarjeta WHERE numero_enmascarado = '4532 **** **** 1234'),
     NOW() - INTERVAL '10 days',
     (SELECT id FROM tipoMovimientoTarjeta WHERE nombre = 'Compra'),
-    'Compra en línea Amazon',
+    'Compra en linea Amazon',
     (SELECT id FROM moneda WHERE iso = 'USD'),
     250.00,
     'Amazon.com',
-    'En línea',
+    'En linea',
     'AMZ-001'
 ),
 (
@@ -580,7 +588,7 @@ INSERT INTO movimientoTarjeta (
     (SELECT id FROM moneda WHERE iso = 'USD'),
     85.50,
     'Il Pizzaiolo',
-    'Escazú',
+    'Escazu',
     'REST-002'
 ),
 (
@@ -591,11 +599,11 @@ INSERT INTO movimientoTarjeta (
     (SELECT id FROM moneda WHERE iso = 'USD'),
     500.00,
     NULL,
-    'Banca en línea',
+    'Banca en linea',
     'PAG-003'
 );
 
--- Movimientos tarjeta GOLD de Juan Pérez
+-- Movimientos tarjeta GOLD de Juan Perez
 INSERT INTO movimientoTarjeta (
     tarjeta_id,
     fecha,
@@ -614,7 +622,7 @@ INSERT INTO movimientoTarjeta (
     (SELECT id FROM moneda WHERE iso = 'CRC'),
     45000.00,
     'Delta',
-    'San José'
+    'San Jose'
 ),
 (
     (SELECT id FROM tarjeta WHERE numero_enmascarado = '5425 **** **** 5678'),
@@ -627,7 +635,7 @@ INSERT INTO movimientoTarjeta (
     'Alajuela'
 );
 
--- Movimientos tarjeta BLACK de María González
+-- Movimientos tarjeta BLACK de Maria Gonzalez
 INSERT INTO movimientoTarjeta (
     tarjeta_id,
     fecha,
@@ -656,7 +664,7 @@ INSERT INTO movimientoTarjeta (
     (SELECT id FROM moneda WHERE iso = 'USD'),
     850.00,
     'American Airlines',
-    'En línea'
+    'En linea'
 ),
 (
     (SELECT id FROM tarjeta WHERE numero_enmascarado = '3782 **** **** 9012'),
@@ -666,36 +674,7 @@ INSERT INTO movimientoTarjeta (
     (SELECT id FROM moneda WHERE iso = 'USD'),
     2050.00,
     NULL,
-    'Banca en línea'
+    'Banca en linea'
 );
 
--- ====================================
--- RESUMEN DE DATOS INSERTADOS
--- ====================================
 
--- 1 API Key de prueba
--- 4 Usuarios (1 admin + 3 clientes)
--- 5 Cuentas bancarias
--- 5 Tarjetas de crédito (todas las categorías: platinum, gold, black, blue, saprisa)
--- 5 Movimientos de cuenta
--- 8 Movimientos de tarjeta
-
--- CREDENCIALES PARA PRUEBAS:
--- ===========================
--- Admin:
---   Usuario: admin
---   Password: Admin123!
---
--- Cliente 1:
---   Usuario: juanperez
---   Password: Juan123!
---
--- Cliente 2:
---   Usuario: mariagonzalez
---   Password: Maria123!
---
--- Cliente 3:
---   Usuario: carlosramirez
---   Password: Carlos123!
---
--- API Key: test-api-key-12345
