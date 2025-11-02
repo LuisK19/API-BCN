@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const db = require("../config/database");
-
 const bcrypt = require("bcrypt");
+const audit = require("../utils/auditHelper");
 
 // LOGIN: Usa SP y valida API Key
 const login = async (req, res, next) => {
@@ -43,7 +43,6 @@ const login = async (req, res, next) => {
         [usernameOrEmail],
     );
     const user = userResult.rows[0];
-    console.log(user);
     if (!user) {
       return res.status(401).json({
         error: {
@@ -54,11 +53,8 @@ const login = async (req, res, next) => {
         },
       });
     }
-    // Validar contraseña (bcrypt)
-    console.log("Hash de la contraseña:", user.contrasena_hash);
-    console.log("Contraseña ingresada:", password);
+
     const validPassword = await bcrypt.compare(password, user.contrasena_hash);
-    console.log("Contraseña válida:", validPassword);
 
     if (!validPassword) {
       return res.status(401).json({
@@ -72,10 +68,23 @@ const login = async (req, res, next) => {
     }
     // Generar JWT
     const token = jwt.sign(
-        {id: user.user_id, username: user.usuario, role: user.rol_nombre},
+        {
+          id: user.user_id,
+          username: user.usuario,
+          role: user.rol_nombre,
+          identification: user.identificacion,
+        },
         process.env.JWT_SECRET,
         {expiresIn: "1h"},
     );
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logLogin(user.user_id, req);
+    } catch (auditError) {
+      console.error("Error registrando auditoría de login:", auditError.message);
+    }
+
     res.status(200).json({
       token,
       user: {
@@ -131,6 +140,14 @@ const forgotPassword = async (req, res, next) => {
     if (otpResult.rows && otpResult.rows[0]) {
       otpId = otpResult.rows[0].id ? otpResult.rows[0].id : otpResult.rows[0].sp_otp_create;
     }
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logOTPGenerate(user.user_id, user.user_id, proposito);
+    } catch (auditError) {
+      console.error("Error registrando auditoría de OTP:", auditError.message);
+    }
+
     res.status(201).json({
       otpId,
       otpCode,
@@ -226,9 +243,7 @@ const resetPassword = async (req, res, next) => {
   try {
     // Buscar usuario
     const userResult = await db.query("SELECT * FROM sp_auth_user_get_by_username_or_email($1)", [usernameOrEmail]);
-    console.log("userResult:", userResult);
     const user = userResult.rows[0];
-    console.log("user:", user);
     if (!user) {
       return res.status(404).json({
         error: {
@@ -270,10 +285,8 @@ const resetPassword = async (req, res, next) => {
       });
     }
     // Cambiar contraseña usando el SP real
-    console.log("OTP verificado, cambiando contraseña para usuario:", user.user_id);
-    console.log("Nueva contraseña:", newPassword);
+
     const newHash = await bcrypt.hash(newPassword, 12);
-    console.log("Nuevo hash de contraseña:", newHash);
     const changeResult = await db.query("SELECT * FROM sp_users_change_password($1, $2)", [user.user_id, newHash]);
     const success = changeResult.rows && changeResult.rows[0] ? changeResult.rows[0].success : undefined;
     if (!success) {
@@ -288,6 +301,14 @@ const resetPassword = async (req, res, next) => {
     }
     // Consumir el OTP (marcar como usado) solo si el cambio fue exitoso
     await db.query("UPDATE Otps SET fecha_consumido = NOW() WHERE id = $1", [otpDb.id]);
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logPasswordReset(user.user_id);
+    } catch (auditError) {
+      console.error("Error registrando auditoría de reset password:", auditError.message);
+    }
+
     res.status(200).json({
       success: true,
       message: "Contraseña cambiada exitosamente",

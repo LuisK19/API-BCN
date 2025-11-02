@@ -1,5 +1,6 @@
 const db = require("../config/database");
 const bcrypt = require("bcrypt");
+const audit = require("../utils/auditHelper");
 
 // Crear usuario
 const createUser = async (req, res, next) => {
@@ -65,6 +66,25 @@ const createUser = async (req, res, next) => {
         },
       });
     }
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logUserCreate(
+          req.user ? req.user.id : userId, // Si no hay req.user (registro público), usar el userId creado
+          userId,
+          {
+            identificacion,
+            nombre,
+            apellido: `${primerApellido} ${segundoApellido || ""}`.trim(),
+            correo,
+            usuario,
+            rol,
+          },
+      );
+    } catch (auditError) {
+      console.error("Error registrando auditoría de creación de usuario:", auditError.message);
+    }
+
     res.status(201).json({userId, message: "Usuario creado exitosamente"});
   } catch (error) {
     next(error);
@@ -74,15 +94,12 @@ const createUser = async (req, res, next) => {
 // Consultar usuario por identificación
 const getUserByIdentification = async (req, res, next) => {
   const {identification} = req.params;
-  console.log("Identification param:", identification);
   const user = req.user;
-  console.log("Authenticated user:", user);
   try {
     const result = await db.query(
         "SELECT * FROM sp_users_get_by_identification($1)",
         [identification],
     );
-    console.log("Database query result:", result);
     const found = result.rows && result.rows[0] ? result.rows[0] : undefined;
     if (!found) {
       return res.status(404).json({
@@ -94,14 +111,15 @@ const getUserByIdentification = async (req, res, next) => {
         },
       });
     }
-    // Solo admin o dueño puede consultar
-    console.log("user:", user);
-    if (user.role !== "admin" && user.identification !== identification) {
-      console.log("Unauthorized access attempt:", {user, identification});
+
+    // Validación: Admin puede ver cualquier usuario, o el usuario puede ver su propia info
+    const isAdmin = user.role === "admin";
+    const isOwnInfo = user.identification === found.identificacion;
+    if (!isAdmin && !isOwnInfo) {
       return res.status(403).json({
         error: {
           code: "FORBIDDEN",
-          message: "No autorizado",
+          message: "No autorizado para consultar este usuario",
           timestamp: new Date().toISOString(),
           path: req.path,
         },
@@ -173,6 +191,18 @@ const updateUser = async (req, res, next) => {
         },
       });
     }
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      const camposActualizados = Object.keys(req.body);
+      await audit.logUserUpdate(user.id, id, {
+        camposActualizados,
+        valores: req.body,
+      });
+    } catch (auditError) {
+      console.error("Error registrando auditoría de actualización de usuario:", auditError.message);
+    }
+
     res.status(200).json({message: "Usuario actualizado exitosamente"});
   } catch (error) {
     next(error);
@@ -194,6 +224,13 @@ const deleteUser = async (req, res, next) => {
     });
   }
   try {
+    // Obtener información del usuario antes de eliminar
+    const userInfoResult = await db.query(
+        "SELECT identificacion, usuario FROM usuario WHERE id = $1",
+        [id],
+    );
+    const userInfo = userInfoResult.rows[0];
+
     const result = await db.query(
         "SELECT * FROM sp_users_delete($1)",
         [id],
@@ -209,6 +246,17 @@ const deleteUser = async (req, res, next) => {
         },
       });
     }
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logUserDelete(user.id, id, {
+        identificacion: userInfo ? userInfo.identificacion : null,
+        usuario: userInfo ? userInfo.usuario : null,
+      });
+    } catch (auditError) {
+      console.error("Error registrando auditoría de eliminación de usuario:", auditError.message);
+    }
+
     res.status(200).json({message: "Usuario eliminado exitosamente"});
   } catch (error) {
     next(error);

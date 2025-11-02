@@ -13,12 +13,23 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 
+console.log("[index.js] Iniciando carga de variables de entorno...");
 dotenv.config();
+console.log("[index.js] Variables cargadas:");
+console.log("  - NODE_ENV:", process.env.NODE_ENV);
+console.log("  - DEV_PORT:", process.env.DEV_PORT);
+console.log("  - PGHOST:", process.env.PGHOST);
+console.log("  - PGPORT:", process.env.PGPORT);
+console.log("  - PGDATABASE:", process.env.PGDATABASE);
+console.log("  - PGUSER:", process.env.PGUSER);
 
 const authRoutes = require("./routes/auth");
 const usersRoutes = require("./routes/users");
 const accountsRoutes = require("./routes/accounts");
 const cardsRoutes = require("./routes/cards");
+const transfersRoutes = require("./routes/transfers");
+const bankRoutes = require("./routes/bank");
+const auditRoutes = require("./routes/audit");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 
 const app = express();
@@ -34,6 +45,9 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", usersRoutes);
 app.use("/api/v1/accounts", accountsRoutes);
 app.use("/api/v1/cards", cardsRoutes);
+app.use("/api/v1/transfers", transfersRoutes);
+app.use("/api/v1/bank", bankRoutes);
+app.use("/api/v1/audit", auditRoutes);
 app.get("/api/v1/health", (req, res) => {
   res.json({
     status: "OK",

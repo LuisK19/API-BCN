@@ -1,4 +1,38 @@
 const db = require("../config/database");
+const audit = require("../utils/auditHelper");
+const crypto = require("crypto");
+
+// Configuración de encriptación AES para PIN/CVV
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "12345678901234567890123456789012"; // 32 bytes
+const ENCRYPTION_IV_LENGTH = 16;
+
+/**
+ * Encripta datos sensibles usando AES-256-CBC.
+ * @param {string} text - Texto a encriptar (PIN o CVV).
+ * @return {string} Texto encriptado en formato "iv:encryptedData".
+ */
+function encrypt(text) {
+  const iv = crypto.randomBytes(ENCRYPTION_IV_LENGTH);
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
+}
+
+/**
+ * Desencripta datos sensibles previamente encriptados con AES-256-CBC.
+ * @param {string} text - Texto encriptado en formato "iv:encryptedData".
+ * @return {string} Texto desencriptado (PIN o CVV original).
+ */
+function decrypt(text) {
+  const parts = text.split(":");
+  const iv = Buffer.from(parts.shift(), "hex");
+  const encryptedText = Buffer.from(parts.join(":"), "hex");
+  const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
+}
 
 // Crear tarjeta
 const createCard = async (req, res, next) => {
@@ -13,17 +47,18 @@ const createCard = async (req, res, next) => {
     compania,
     limiteCredito,
     saldoActual,
-    cuentaAsociada,
-    alias,
+    categoria,
+    tasaInteres,
   } = req.body;
 
   // Validar campos obligatorios
-  if (!tipo || !numeroEnmascarado || !fechaExpiracion || !cvvEncriptado || !pinEncriptado || !moneda || !compania) {
+  if (!tipo || !numeroEnmascarado || !fechaExpiracion || !cvvEncriptado ||
+      !pinEncriptado || !moneda || !compania || !limiteCredito) {
     return res.status(422).json({
       error: {
         code: "VALIDATION_ERROR",
         message: "Faltan campos obligatorios: tipo, numeroEnmascarado, fechaExpiracion, " +
-                 "cvvEncriptado, pinEncriptado, moneda, compania",
+                 "cvvEncriptado, pinEncriptado, moneda, compania, limiteCredito",
         timestamp: new Date().toISOString(),
         path: req.path,
       },
@@ -47,21 +82,25 @@ const createCard = async (req, res, next) => {
   }
 
   try {
+    // Encriptar CVV y PIN con AES antes de enviar al SP
+    const cvvEncrypted = encrypt(cvvEncriptado);
+    const pinEncrypted = encrypt(pinEncriptado);
+
     const result = await db.query(
         "SELECT * FROM sp_cards_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
         [
-          user.id,
-          tipo,
-          numeroEnmascarado,
-          fechaExpiracion,
-          cvvEncriptado,
-          pinEncriptado,
-          moneda,
-          compania.toLowerCase(),
-          limiteCredito || null,
-          saldoActual || 0,
-          cuentaAsociada || null,
-          alias || null,
+          user.id, // p_usuario_id
+          tipo, // p_tipo (UUID)
+          numeroEnmascarado, // p_numero_enmascarado
+          fechaExpiracion, // p_fecha_expiracion (MM/YY)
+          cvvEncrypted, // p_cvv_encriptado (AES encrypted)
+          pinEncrypted, // p_pin_encriptado (AES encrypted)
+          moneda, // p_moneda (UUID)
+          limiteCredito, // p_limite_credito (DECIMAL)
+          saldoActual || 0, // p_saldo_actual (DECIMAL, default 0)
+          compania.toLowerCase(), // p_compania (VARCHAR: visa, mastercard, etc.)
+          categoria || null, // p_categoria (VARCHAR: gold, platinum, black, blue, saprisa)
+          tasaInteres || null, // p_tasa_interes (DECIMAL, default 18.50 en SP)
         ],
     );
 
@@ -77,6 +116,21 @@ const createCard = async (req, res, next) => {
       });
     }
 
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logCardCreate(user.id, row.card_id, {
+        tipo,
+        moneda,
+        numeroEnmascarado,
+        limiteCredito,
+        compania,
+        categoria: categoria || "blue",
+        saldoActual: saldoActual || 0,
+      });
+    } catch (auditError) {
+      console.error("Error registrando auditoría de creación de tarjeta:", auditError.message);
+    }
+
     res.status(201).json({cardId: row.card_id, message: row.message});
   } catch (error) {
     next(error);
@@ -86,10 +140,22 @@ const createCard = async (req, res, next) => {
 // Listar tarjetas de usuario
 const listCards = async (req, res, next) => {
   const user = req.user;
+  const {userId} = req.query; // Admin puede consultar tarjetas de otro usuario
+
   try {
+    // Determinar de quién se consultan las tarjetas
+    let targetUserId;
+    if (user.role === "admin" && userId) {
+      // Admin puede consultar tarjetas de cualquier usuario
+      targetUserId = userId;
+    } else {
+      // Cliente solo puede ver sus propias tarjetas
+      targetUserId = user.id;
+    }
+
     const result = await db.query(
         "SELECT * FROM sp_cards_get($1, NULL)",
-        [user.id],
+        [targetUserId],
     );
     res.status(200).json({cards: result.rows});
   } catch (error) {
@@ -204,7 +270,6 @@ const addCardMovement = async (req, res, next) => {
     moneda,
     monto,
     comerciante,
-    categoria,
     ubicacion,
   } = req.body;
 
@@ -253,17 +318,16 @@ const addCardMovement = async (req, res, next) => {
 
     // Agregar movimiento
     const result = await db.query(
-        "SELECT * FROM sp_card_movement_add($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        "SELECT * FROM sp_card_movement_add($1, $2, $3, $4, $5, $6, $7, $8)",
         [
-          cardid,
-          fecha,
-          tipo,
-          descripcion,
-          moneda,
-          parseFloat(monto),
-          comerciante || null,
-          categoria || null,
-          ubicacion || null,
+          cardid, // p_card_id
+          fecha, // p_fecha
+          tipo, // p_tipo (UUID: Compra o Pago)
+          descripcion, // p_descripcion
+          moneda, // p_moneda (UUID)
+          parseFloat(monto), // p_monto
+          comerciante || null, // p_comerciante
+          ubicacion || null, // p_ubicacion
         ],
     );
 
@@ -277,6 +341,19 @@ const addCardMovement = async (req, res, next) => {
           path: req.path,
         },
       });
+    }
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logCardMovementAdd(user.id, cardid, {
+        tipo,
+        monto: parseFloat(monto),
+        descripcion,
+        comerciante: comerciante || null,
+        movementId: row.movement_id,
+      });
+    } catch (auditError) {
+      console.error("Error registrando auditoría de movimiento de tarjeta:", auditError.message);
     }
 
     // Nota: nuevoSaldo para crédito = saldo de tarjeta, para débito = saldo de cuenta
@@ -335,7 +412,7 @@ const generateOtpForCardDetails = async (req, res, next) => {
     // Guardar OTP en la base de datos (válido por 5 minutos = 300 segundos)
     const result = await db.query(
         "SELECT sp_otp_create($1, $2, $3, $4) as otp_id",
-        [user.id, "view_card_details", 300, otpHash],
+        [user.id, "card_details", 300, otpHash],
     );
 
     const otpId = result.rows && result.rows[0] ? result.rows[0].otp_id : null;
@@ -418,7 +495,7 @@ const viewCardDetailsWithOtp = async (req, res, next) => {
 
     const otpResult = await db.query(
         "SELECT * FROM sp_otp_consume($1, $2, $3)",
-        [user.id, "view_card_details", otpHash],
+        [user.id, "card_details", otpHash],
     );
 
     const otpRow = otpResult.rows && otpResult.rows[0] ? otpResult.rows[0] : undefined;
@@ -433,16 +510,61 @@ const viewCardDetailsWithOtp = async (req, res, next) => {
       });
     }
 
-    // OTP válido - devolver datos sensibles (en producción estos estarían encriptados)
-    // NOTA: pin_hash y cvv_hash están hasheados, en producción necesitarían desencriptarse
+    // Consultar directamente la tabla tarjeta para obtener pin_hash y cvv_hash
+    const cardDetailsResult = await db.query(
+        "SELECT pin_hash, cvv_hash FROM tarjeta WHERE id = $1",
+        [cardid],
+    );
+
+    const cardDetails = cardDetailsResult.rows && cardDetailsResult.rows[0] ?
+      cardDetailsResult.rows[0] : undefined;
+
+    if (!cardDetails || !cardDetails.pin_hash || !cardDetails.cvv_hash) {
+      console.error("Datos sensibles no encontrados en la base de datos para tarjeta:", cardid);
+      return res.status(500).json({
+        error: {
+          code: "DATA_NOT_FOUND",
+          message: "No se encontraron los datos sensibles de la tarjeta",
+          timestamp: new Date().toISOString(),
+          path: req.path,
+        },
+      });
+    }
+
+    // Desencriptar PIN y CVV
+    let decryptedPIN;
+    let decryptedCVV;
+    try {
+      decryptedPIN = decrypt(cardDetails.pin_hash);
+      decryptedCVV = decrypt(cardDetails.cvv_hash);
+    } catch (decryptError) {
+      console.error("Error al desencriptar datos sensibles:", decryptError.message);
+      console.error("pin_hash:", cardDetails.pin_hash);
+      console.error("cvv_hash:", cardDetails.cvv_hash);
+      return res.status(500).json({
+        error: {
+          code: "DECRYPTION_ERROR",
+          message: "Error al recuperar datos sensibles",
+          timestamp: new Date().toISOString(),
+          path: req.path,
+        },
+      });
+    }
+
+    // REGISTRAR EN AUDITORÍA - Acción sensible
+    try {
+      await audit.logViewSensitiveData(user.id, cardid, "PIN/CVV");
+    } catch (auditError) {
+      console.error("Error registrando auditoría de vista de datos sensibles:", auditError.message);
+    }
+
     res.status(200).json({
       message: "Acceso temporal concedido",
       cardId: card.id,
       numeroEnmascarado: card.numero_enmascarado,
-      // En producción, estos deberían desencriptarse temporalmente
-      pin: "****", // Placeholder - implementar desencriptación
-      cvv: "***", // Placeholder - implementar desencriptación
-      expiresIn: 30, // 30 segundos de visibilidad
+      pin: decryptedPIN,
+      cvv: decryptedCVV,
+      expiresIn: 30,
       warning: "Esta información es sensible y solo estará visible temporalmente",
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 const db = require("../config/database");
+const audit = require("../utils/auditHelper");
 
 // Crear cuenta bancaria
 const createAccount = async (req, res, next) => {
@@ -36,6 +37,20 @@ const createAccount = async (req, res, next) => {
         },
       });
     }
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logAccountCreate(user.id, row.account_id, {
+        tipo: tipoCuenta,
+        moneda,
+        saldoInicial,
+        iban,
+        alias,
+      });
+    } catch (auditError) {
+      console.error("Error registrando auditoría de creación de cuenta:", auditError.message);
+    }
+
     res.status(201).json({accountId: row.account_id, message: row.message});
   } catch (error) {
     next(error);
@@ -45,12 +60,25 @@ const createAccount = async (req, res, next) => {
 // Listar cuentas de usuario
 const listAccounts = async (req, res, next) => {
   const user = req.user;
+  const {userId} = req.query; // Admin puede consultar cuentas de otro usuario
+
   try {
+    // Determinar de quién se consultan las cuentas
+    let targetUserId;
+    if (user.role === "admin" && userId) {
+      // Admin puede consultar cuentas de cualquier usuario
+      targetUserId = userId;
+    } else {
+      // Cliente solo puede ver sus propias cuentas
+      targetUserId = user.id;
+    }
+
     const result = await db.query(
         "SELECT * FROM sp_accounts_get($1, NULL)",
-        [user.id],
+        [targetUserId],
     );
     res.status(200).json({accounts: result.rows});
+    console.log("Cuentas listadas para el usuario:", result.rows);
   } catch (error) {
     next(error);
   }
@@ -151,6 +179,22 @@ const setAccountStatus = async (req, res, next) => {
         },
       });
     }
+
+    // REGISTRAR EN AUDITORÍA
+    try {
+      await audit.logStatusChange(
+          user.id,
+          audit.AuditEntity.CUENTA,
+          accountid,
+          {
+            estadoAnterior: account.estado_nombre,
+            estadoNuevo: nuevoEstado,
+          },
+      );
+    } catch (auditError) {
+      console.error("Error registrando auditoría de cambio de estado:", auditError.message);
+    }
+
     res.status(200).json({message: row.message});
   } catch (error) {
     console.error("Error en setAccountStatus:", error);
