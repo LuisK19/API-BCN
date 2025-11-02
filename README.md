@@ -1,151 +1,145 @@
 
-# API REST - Proyecto 2 - IC8057
+# API REST - Sistema Bancario
 
-API REST desarrollada para el sistema bancario del Proyecto 2 de IC8057, siguiendo los requisitos académicos: autenticación segura, control de roles, integración con procedimientos almacenados (SPs) y manejo robusto de errores.
+API REST desarrollada con Node.js y Express.js como backend para un sistema bancario, implementando autenticación segura, control de roles y operaciones CRUD sobre PostgreSQL mediante Stored Procedures.
 
-## Objetivo general
+## Tecnologías
 
-Desarrollar una API REST funcional y segura que sirva como backend para el sistema bancario, implementando autenticación, control de roles y conexión con una base de datos relacional mediante Stored Procedures.
-
-## Objetivos específicos
-
-- Modelar y crear una base de datos relacional con SPs para usuarios, cuentas, tarjetas y movimientos.
-- Implementar endpoints REST para operaciones CRUD sobre las entidades principales.
-- Integrar autenticación y autorización usando API Key y JWT, validando roles y propiedad de recursos.
-- Validar integridad y acceso en cada endpoint, devolviendo errores adecuados.
-- Garantizar respuestas JSON estructuradas y uso correcto de códigos HTTP.
-- Documentar y entregar la API con pruebas Postman y guía de uso.
-
-## Requisitos generales
-
-- Node.js + Express.js
-- PostgreSQL con SPs para todas las operaciones
-- Autenticación inicial por API Key, operaciones protegidas por JWT
-- Validación de roles y propiedad de recursos
-- Respuestas JSON uniformes y manejo de errores
-- Documentación completa y colección Postman
+- Node.js 22
+- Express.js
+- Firebase Functions
+- PostgreSQL
+- JWT (JSON Web Token)
+- Bcrypt para encriptación
 
 ## Estructura del Proyecto
 
 ```
-node-rest-api/
-├── app.js                      # Archivo principal
-├── package.json                # Configuración del proyecto
-├── .env                        # Variables de entorno
-├── controllers/                # Lógica de negocio y conexión con SPs
-├── routes/                     # Definición de rutas REST
-├── middlewares/                # Autenticación, autorización y errores
-├── utils/                      # Utilidades varias
-├── SQL/                        # Scripts de SPs y estructura de BD
-└── docs/                       # Colección Postman y documentación
+Api-Banco/
+├── functions/
+│   ├── index.js                # Punto de entrada de la aplicación
+│   ├── package.json            # Dependencias del proyecto
+│   ├── config/
+│   │   └── database.js         # Configuración de conexión a PostgreSQL
+│   ├── controllers/            # Lógica de negocio
+│   ├── routes/                 # Definición de endpoints
+│   ├── middlewares/            # Autenticación y manejo de errores
+│   └── SQL/                    # Scripts de base de datos
+└── docs/                       # Colecciones de Postman
 ```
 
+## Instalación
 
-## Instalación y ejecución
+1. Clonar el repositorio:
+```bash
+git clone https://github.com/LuisK19/API-BCN
+cd Api-Banco
+```
 
-1. **Clonar el repositorio**
-  ```bash
-  git clone <url-del-repositorio>
-  cd node-rest-api
-  ```
-2. **Instalar dependencias**
-  ```bash
-  npm install
-  ```
-3. **Configurar variables de entorno**
-  Crea un archivo `.env` en la raíz del proyecto:
-  ```env
-  PORT=3000
-  API_KEY=tu_api_key_para_autenticacion
-  JWT_SECRET=tu_clave_secreta_jwt_muy_segura
-  DEV_DB_USER=usuario
-  DEV_DB_HOST=localhost
-  DEV_DB_PORT=5432
-  DEV_DB_NAME=nombre_bd
-  DEV_DB_PASSWORD=tu_password
-  DEV_DB_SSL=false
-  ```
-4. **Ejecutar la aplicación**
-  ```bash
-  npm run dev   # Modo desarrollo
-  npm start     # Modo producción
-  ```
-  El servidor se ejecutará en `http://localhost:3000`
+2. Instalar dependencias:
+```bash
+cd functions
+npm install
+```
 
+3. Configurar variables de entorno:
+Crear archivo `.env` en la carpeta `functions/`:
+```env
+NODE_ENV=development
+JWT_SECRET=tu_clave_secreta_jwt
 
+PGUSER=user_bcn
+PGHOST=134.199.141.222
+PGPORT=15434
+PGDATABASE=fecr_bcn
+PGPASSWORD=tu_password
+PGSSL=false
+```
 
-## Endpoints implementados y Stored Procedures (SP) asociadas
+## Ejecución
 
-| Método | Ruta | Descripción | SP asociada | Estado |
-|--------|------|-------------|-------------|--------|
-| POST   | /api/v1/auth/login           | Login usuario/email + contraseña | sp_auth_user_get_by_username_or_email, sp_api_key_is_active | ✅ |
-| POST   | /api/v1/auth/forgot-password | Generar OTP para recuperación    | sp_otp_create | ✅ |
-| POST   | /api/v1/auth/verify-otp      | Verificar y consumir OTP         | sp_otp_consume | ✅ |
-| POST   | /api/v1/auth/reset-password  | Resetear contraseña con OTP      | sp_otp_consume | ✅ |
-| POST   | /api/v1/users                | Crear usuario                    | sp_users_create | ✅ |
-| GET    | /api/v1/users/:identification| Consultar usuario por identificación | sp_users_get_by_identification | ✅ |
-| PUT    | /api/v1/users/:id            | Actualizar usuario               | sp_users_update | ✅ |
-| DELETE | /api/v1/users/:id            | Eliminar usuario                 | sp_users_delete | ✅ |
-| POST   | /api/v1/accounts             | Crear cuenta bancaria            | sp_accounts_create | ✅ |
-| GET    | /api/v1/accounts             | Listar cuentas de usuario        | sp_accounts_get | ✅ |
-| GET    | /api/v1/accounts/:accountid  | Consultar detalle de cuenta      | sp_accounts_get | ✅ |
-| POST   | /api/v1/accounts/:accountid/status | Cambiar estado de cuenta  | sp_accounts_set_status | ✅ |
-| GET    | /api/v1/accounts/:accountid/movements | Listar movimientos de cuenta | sp_account_movements_list |  |
-| POST   | /api/v1/transfers/internal   | Transferencia interna            | sp_transfer_create_internal |  |
-| POST   | /api/v1/cards                | Crear tarjeta                    | sp_cards_create |  |
-| GET    | /api/v1/cards                | Listar tarjetas de usuario       | sp_cards_get |  |
-| GET    | /api/v1/cards/:cardid        | Consultar detalle de tarjeta     | sp_cards_get |  |
-| GET    | /api/v1/cards/:cardid/movements | Listar movimientos de tarjeta | sp_card_movements_list |  |
-| POST   | /api/v1/cards/:cardid/movements | Agregar movimiento de tarjeta | sp_card_movement_add |  |
-| POST   | /api/v1/cards/:cardid/otp    | Generar OTP para PIN/CVV         | sp_otp_create |  |
-| POST   | /api/v1/cards/:cardid/view-details | Verificar OTP y ver PIN/CVV | sp_otp_consume |  |
-| POST   | /api/v1/bank/validate-account| Validar cuenta bancaria          | sp_bank_validate_account |  |
-| GET    | /api/v1/audit/:userId        | Consultar historial de auditoría | sp_audit_list_by_user |  |
+**Desarrollo local:**
+```bash
+npm run serve
+```
 
-**Estado:** Marca con ✅ los endpoints ya implementados y deja en blanco los pendientes.
+**Despliegue a Firebase:**
+```bash
+firebase deploy --only functions
+```
 
+**URL de producción:**
+```
+https://us-central1-api-banco-web.cloudfunctions.net/api
+```
 
-## Pruebas y documentación
+## Endpoints Principales
 
-1. Importa la colección Postman desde `docs/Laboratorio-8-API-REST.postman_collection.json`
-2. Importa el environment desde `docs/Laboratorio-8-Environment.postman_environment.json`
-3. Ejecuta las pruebas siguiendo la guía en `docs/README.md`
+Todos los endpoints están bajo el prefijo `/api/v1`
 
-### Headers requeridos
+### Autenticación
+- `POST /auth/login` - Iniciar sesión
+- `POST /auth/forgot-password` - Recuperar contraseña
+- `POST /auth/verify-otp` - Verificar código OTP
+- `POST /auth/reset-password` - Restablecer contraseña
 
-- Para endpoints públicos:
-  ```
-  x-api-key: tu-api-key
-  ```
-- Para endpoints protegidos:
-  ```
-  Authorization: Bearer <jwt-token-obtenido-del-login>
-  ```
-- Para negociación de contenido:
-  ```
-  Accept: application/json  # Para JSON (default)
-  Accept: application/xml   # Para XML
-  ```
+### Usuarios
+- `POST /users` - Crear usuario
+- `GET /users/:identification` - Consultar usuario
+- `PUT /users/:id` - Actualizar usuario
+- `DELETE /users/:id` - Eliminar usuario
 
+### Cuentas
+- `POST /accounts` - Crear cuenta
+- `GET /accounts` - Listar cuentas
+- `GET /accounts/:accountid` - Detalle de cuenta
+- `POST /accounts/:accountid/status` - Cambiar estado
+- `GET /accounts/:accountid/movements` - Listar movimientos
 
-## Códigos de estado HTTP
+### Tarjetas
+- `POST /cards` - Crear tarjeta
+- `GET /cards` - Listar tarjetas
+- `GET /cards/:cardid` - Detalle de tarjeta
+- `GET /cards/:cardid/movements` - Movimientos de tarjeta
+- `POST /cards/:cardid/otp` - Generar OTP para PIN/CVV
+- `POST /cards/:cardid/view-details` - Ver detalles sensibles
 
-| Código | Descripción | Casos de uso |
-|--------|-------------|--------------|
-| 200    | OK          | Consultas exitosas |
-| 201    | Created     | Recurso creado |
-| 204    | No Content  | Recurso eliminado |
-| 401    | Unauthorized| API Key/JWT faltante o inválido |
-| 403    | Forbidden   | Permisos insuficientes |
-| 404    | Not Found   | Recurso no encontrado |
-| 409    | Conflict    | Duplicidad o conflicto |
-| 422    | Unprocessable Entity | Errores de validación |
-| 500    | Internal Server Error| Errores del servidor |
+### Transferencias
+- `POST /transfers/internal` - Transferencia interna
 
+### Validación
+- `POST /bank/validate-account` - Validar cuenta bancaria
 
-## Formato de respuestas
+### Auditoría
+- `GET /audit/:userId` - Historial de auditoría
 
-### Respuesta exitosa
+## Autenticación
+
+**API Key (endpoints públicos):**
+```
+x-api-key: tu-api-key
+```
+
+**JWT (endpoints protegidos):**
+```
+Authorization: Bearer <token>
+```
+
+## Códigos de Estado HTTP
+
+| Código | Descripción |
+|--------|-------------|
+| 200 | Operación exitosa |
+| 201 | Recurso creado |
+| 400 | Solicitud incorrecta |
+| 401 | No autenticado |
+| 403 | No autorizado |
+| 404 | No encontrado |
+| 500 | Error del servidor |
+
+## Formato de Respuestas
+
+**Éxito:**
 ```json
 {
   "data": { ... },
@@ -153,61 +147,29 @@ node-rest-api/
 }
 ```
 
-### Respuesta de error
+**Error:**
 ```json
 {
   "error": {
-    "code": "NOT_FOUND",
-    "message": "Usuario no encontrado",
-    "details": {},
-    "timestamp": "2025-10-27T09:04:16.114Z",
-    "path": "/api/v1/users/999"
+    "code": "ERROR_CODE",
+    "message": "Descripción del error",
+    "timestamp": "2025-11-02T10:30:00.000Z",
+    "path": "/api/v1/endpoint"
   }
 }
 ```
 
+## Documentación
 
-actualizar en base:
+- Repositorio: https://github.com/LuisK19/API-BCN
+- Postman: https://documenter.getpostman.com/view/48954743/2sB3WpRLnA
+- Firebase (API): https://console.firebase.google.com/u/0/project/api-banco-web/overview
+- Colecciones Postman en: `functions/docs/`
 
+## Seguridad
 
-sp_accounts_create
-sp_accounts_set_status
-sp_cards_create
-sp_cards_update_status
-sp_users_change_password
-
-
-# Producción
-PROD_NODE_ENV=production
-PROD_JWT_SECRET=clave_secreta_produccion_muy_segura
-PROD_API_KEY=api_key_produccion
-PROD_DB_USER=user_bcn
-PROD_DB_HOST=134.199.141.222
-PROD_DB_PORT=15434
-PROD_DB_NAME=fecr_bcn
-PROD_DB_PASSWORD=Kt4!mX12vE
-PROD_DB_SSL=false
-
-JWT_SECRET=Qp9!vT$2zX@7rLw#sD8eF6gH1jK4mN0bC5uY3aZxWqE7tR9pS
-
-
-
-No, esto está corriendo solo en tu máquina local (localhost) usando el emulador de Firebase.  
-No está disponible en línea ni accesible desde fuera de tu red.
-
-**Para publicar tu API en línea:**
-1. Debes desplegar tus funciones a Firebase con:
-   ```powershell
-   firebase deploy --only functions
-   ```
-2. Después del despliegue, Firebase te dará una URL pública para tus endpoints.
-
-¿Quieres que te guíe en el proceso de despliegue?
-
-
-
-https://us-central1-api-banco-web.cloudfunctions.net/api/api/v1/health
-
-
-pasa generar iban:
-node scripts/generar-iban-terminal.js
+- Contraseñas encriptadas con bcrypt
+- PIN y CVV cifrados en base de datos
+- Tokens JWT con expiración
+- Validación de roles (admin/client)
+- Validación de propiedad de recursos
