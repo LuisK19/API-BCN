@@ -11,12 +11,16 @@ API REST desarrollada con Node.js y Express.js como backend para un sistema banc
 - PostgreSQL
 - JWT (JSON Web Token)
 - Bcrypt para encriptación
+- Postman para pruebas de API
+- Firebase para funciones en la nube
+- crypt sha256 
 
 ## Estructura del Proyecto
 
 ```
 Api-Banco/
 ├── functions/
+│   ├── docs/                   # Colecciones de Postman
 │   ├── index.js                # Punto de entrada de la aplicación
 │   ├── package.json            # Dependencias del proyecto
 │   ├── config/
@@ -25,7 +29,6 @@ Api-Banco/
 │   ├── routes/                 # Definición de endpoints
 │   ├── middlewares/            # Autenticación y manejo de errores
 │   └── SQL/                    # Scripts de base de datos
-└── docs/                       # Colecciones de Postman
 ```
 
 ## Instalación
@@ -60,7 +63,7 @@ PGSSL=false
 
 **Desarrollo local:**
 ```bash
-npm run serve
+firebase emulators:start
 ```
 
 **Despliegue a Firebase:**
@@ -164,7 +167,7 @@ Authorization: Bearer <token>
 - Repositorio: https://github.com/LuisK19/API-BCN
 - Postman: https://documenter.getpostman.com/view/48954743/2sB3WpRLnA
 - Firebase (API): https://console.firebase.google.com/u/0/project/api-banco-web/overview
-- Colecciones Postman en: `functions/docs/`
+- Url para endpoints: https://us-central1-api-banco-web.cloudfunctions.net/api
 
 ## Seguridad
 
