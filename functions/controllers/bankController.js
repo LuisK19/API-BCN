@@ -1,59 +1,87 @@
 const db = require("../config/database");
 
-const validateAccount = async (req, res, next) => {
+const CENTRAL_TOKEN = "BANK-CENTRAL-IC8057-2025";
+
+const validateAccount = async (req, res) => {
   try {
-    const {iban} = req.body;
+    // 1) Validar token del Banco Central
+    const token = req.headers["x-api-token"];
 
-    // Validar que el IBAN venga en el request
+    if (!token || token !== CENTRAL_TOKEN) {
+      return res.status(401).json({
+        error: "UNAUTHORIZED",
+        message: "Token inválido o ausente"
+      });
+    }
+
+    // 2) Validar campo IBAN
+    const { iban } = req.body;
+
     if (!iban) {
-      return res.status(422).json({
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "El IBAN es requerido",
-          details: {iban: "Este campo es obligatorio"},
-          timestamp: new Date().toISOString(),
-          path: req.originalUrl,
-        },
+      return res.status(400).json({
+        error: "INVALID_ACCOUNT_FORMAT",
+        message: "El IBAN es obligatorio."
       });
     }
 
-    // Llamar al SP de validación
-    const result = await db.query(
-        "SELECT * FROM sp_bank_validate_account($1)",
-        [iban],
-    );
+    // 3) Validar formato IBAN según estándar del proyecto
+    // CR01B07 + 12 dígitos
+    const ibanRegex = /^CR01B07\d{12}$/;
 
-    const accountInfo = result.rows[0];
-
-    // Si la cuenta no existe o no está activa
-    if (!accountInfo.account_exists) {
-      return res.status(404).json({
-        error: {
-          code: "ACCOUNT_NOT_FOUND",
-          message: "Cuenta bancaria no encontrada o inactiva",
-          details: {iban},
-          timestamp: new Date().toISOString(),
-          path: req.originalUrl,
-        },
+    if (!ibanRegex.test(iban)) {
+      return res.status(400).json({
+        error: "INVALID_ACCOUNT_FORMAT",
+        message: "El formato del IBAN no es válido."
       });
     }
 
-    // Retornar información de la cuenta
+    // 4) Buscar la cuenta en BD
+    const query = `
+  SELECT 
+    c.iban,
+    u.nombre || ' ' || u.primer_apellido || ' ' || u.segundo_apellido AS owner_name,
+    u.identificacion AS owner_id,
+    m.iso AS currency_iso
+  FROM cuenta c
+  JOIN usuario u ON u.id = c.usuario_id
+  JOIN moneda m ON m.id = c.moneda
+  WHERE c.iban = $1
+  LIMIT 1;
+`;
+
+    const result = await db.query(query, [iban]);
+    const row = result.rows[0];
+
+    // 5) Si no existe → exists: false, info: null
+    console.log("Resultado de la consulta:", row);
+    if (!row) {
+      return res.status(200).json({
+        exists: false,
+        info: null
+      });
+    }
+
+    // 6) Si existe
     return res.status(200).json({
-      data: {
-        exists: accountInfo.account_exists,
-        iban: iban,
-        ownerName: accountInfo.owner_name,
-        ownerId: accountInfo.owner_id,
-        accountId: accountInfo.account_id,
-        currencyIso: accountInfo.currency_iso,
-      },
+      exists: true,
+      info: {
+        name: row.owner_name,
+        identification: row.owner_id,
+        currency: row.currency_iso,
+        debit: true,
+        credit: true
+      }
     });
+
   } catch (error) {
-    next(error);
+    console.error("Error en validateAccount:", error);
+    return res.status(500).json({
+      error: "SERVER_ERROR",
+      message: "Error interno del servidor"
+    });
   }
 };
 
 module.exports = {
-  validateAccount,
+  validateAccount
 };
