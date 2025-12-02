@@ -9,6 +9,6 @@ const jwtMiddleware = require("../middlewares/authMiddleware").jwtMiddleware;
  * Validar cuenta bancaria por IBAN
  * Requiere autenticación JWT
  */
-router.post("/validate-account", jwtMiddleware, bankController.validateAccount);
+router.post("/validate-account", bankController.validateAccount);
 
 module.exports = router;
