@@ -2,11 +2,31 @@ const db = require("../config/database");
 
 const CENTRAL_TOKEN = "BANK-CENTRAL-IC8057-2025";
 
+// Obtener nombre del banco por código
+function getBankName(code) {
+  const banks = {
+    "B01": "Banca Prometedora",
+    "B02": "Banca Capital Nacional",
+    "B03": "Banco Astralis",
+    "B04": "Banco DyG",
+    "B05": "Bancrap",
+    "B06": "Banco Damena",
+    "B07": "Banco NSFM",
+    "B08": "Banco Órbita"
+  };
+
+  return banks[code] || "Desconocido";
+}
+
+// Verificar si IBAN pertenece a este banco
+function isFromThisBank(iban) {
+  return iban.substring(4, 7) === "B02";
+}
+
 const validateAccount = async (req, res) => {
   try {
-    // 1) Validar token del Banco Central
+    // Validación token Banco Central
     const token = req.headers["x-api-token"];
-
     if (!token || token !== CENTRAL_TOKEN) {
       return res.status(401).json({
         error: "UNAUTHORIZED",
@@ -14,9 +34,8 @@ const validateAccount = async (req, res) => {
       });
     }
 
-    // 2) Validar campo IBAN
+    // Validación IBAN requerido
     const { iban } = req.body;
-
     if (!iban) {
       return res.status(400).json({
         error: "INVALID_ACCOUNT_FORMAT",
@@ -24,10 +43,8 @@ const validateAccount = async (req, res) => {
       });
     }
 
-    // 3) Validar formato IBAN según estándar del proyecto
-    // CR01B07 + 12 dígitos
-    const ibanRegex = /^CR01B07\d{12}$/;
-
+    // Validación de formato IBAN
+    const ibanRegex = /^CR01B02\d{12}$/;
     if (!ibanRegex.test(iban)) {
       return res.status(400).json({
         error: "INVALID_ACCOUNT_FORMAT",
@@ -35,33 +52,35 @@ const validateAccount = async (req, res) => {
       });
     }
 
-    // 4) Buscar la cuenta en BD
+    // Obtener código del banco del IBAN
+    const bankCode = iban.substring(4, 7);
+    const bankName = getBankName(bankCode);
+
+    // Buscar cuenta
     const query = `
-  SELECT 
-    c.iban,
-    u.nombre || ' ' || u.primer_apellido || ' ' || u.segundo_apellido AS owner_name,
-    u.identificacion AS owner_id,
-    m.iso AS currency_iso
-  FROM cuenta c
-  JOIN usuario u ON u.id = c.usuario_id
-  JOIN moneda m ON m.id = c.moneda
-  WHERE c.iban = $1
-  LIMIT 1;
-`;
+      SELECT 
+        c.iban,
+        u.nombre || ' ' || u.primer_apellido || ' ' || u.segundo_apellido AS owner_name,
+        u.identificacion AS owner_id,
+        m.iso AS currency_iso
+      FROM cuenta c
+      JOIN usuario u ON u.id = c.usuario_id
+      JOIN moneda m ON m.id = c.moneda
+      WHERE c.iban = $1
+      LIMIT 1;
+    `;
 
     const result = await db.query(query, [iban]);
     const row = result.rows[0];
 
-    // 5) Si no existe → exists: false, info: null
-    console.log("Resultado de la consulta:", row);
     if (!row) {
       return res.status(200).json({
         exists: false,
-        info: null
+        info: null,
+        bank: bankName
       });
     }
 
-    // 6) Si existe
     return res.status(200).json({
       exists: true,
       info: {
@@ -70,7 +89,8 @@ const validateAccount = async (req, res) => {
         currency: row.currency_iso,
         debit: true,
         credit: true
-      }
+      },
+      bank: bankName
     });
 
   } catch (error) {
@@ -82,6 +102,4 @@ const validateAccount = async (req, res) => {
   }
 };
 
-module.exports = {
-  validateAccount
-};
+module.exports = { validateAccount };
