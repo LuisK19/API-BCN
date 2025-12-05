@@ -7,4 +7,7 @@ const {jwtMiddleware} = require("../middlewares/authMiddleware");
 // Transferencia interna (entre cuentas del mismo banco)
 router.post("/internal", jwtMiddleware, transfersController.createInternalTransfer);
 
+// Transferencia interbancaria (via WebSocket)
+router.post("/interbank", jwtMiddleware, transfersController.createInterbankTransfer);
+
 module.exports = router;

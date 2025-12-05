@@ -318,9 +318,117 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+/**
+ * REGISTER: Registro público de nuevos usuarios (solo clientes)
+ * @param {object} req - Request
+ * @param {object} res - Response
+ * @param {function} next - Next middleware
+ * @return {Promise<void>}
+ */
+const register = async (req, res, next) => {
+  const {
+    tipoIdentificacion,
+    identificacion,
+    nombre,
+    primerApellido,
+    segundoApellido,
+    correo,
+    telefono,
+    usuario,
+    contrasena,
+    fechaNacimiento,
+  } = req.body;
+
+  // Validar campos requeridos
+  if (!tipoIdentificacion || !identificacion || !nombre ||
+      !primerApellido || !correo || !usuario || !contrasena) {
+    return res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Faltan campos requeridos",
+        timestamp: new Date().toISOString(),
+        path: req.path,
+      },
+    });
+  }
+
+  try {
+    // 1. Obtener el rol 'cliente' por nombre (NO hardcodear UUID)
+    const rolResult = await db.query(
+        "SELECT id FROM rol WHERE nombre = $1",
+        ["cliente"],
+    );
+
+    if (!rolResult.rows || rolResult.rows.length === 0) {
+      return res.status(500).json({
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "No se pudo obtener el rol de cliente",
+          timestamp: new Date().toISOString(),
+          path: req.path,
+        },
+      });
+    }
+
+    const rolCliente = rolResult.rows[0].id;
+
+    // 2. Hash de la contraseña
+    const contrasenaHash = await bcrypt.hash(contrasena, 12);
+
+    // 3. Llamar al SP para crear el usuario
+    const result = await db.query(
+        "SELECT * FROM sp_users_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+        [
+          tipoIdentificacion,
+          identificacion,
+          nombre,
+          primerApellido,
+          segundoApellido || null,
+          correo,
+          telefono || null,
+          usuario,
+          contrasenaHash,
+          rolCliente, // UUID obtenido dinámicamente
+          fechaNacimiento || null,
+        ],
+    );
+
+    const userCreated = result.rows[0];
+
+    // 4. Validar respuesta del SP
+    if (!userCreated.success) {
+      return res.status(400).json({
+        error: {
+          code: "REGISTER_FAILED",
+          message: userCreated.message || "Error al crear usuario",
+          timestamp: new Date().toISOString(),
+          path: req.path,
+        },
+      });
+    }
+
+    // 5. Registrar en auditoría (opcional)
+    try {
+      await audit.logRegister(userCreated.user_id, req);
+    } catch (auditError) {
+      console.error("Error registrando auditoría de registro:", auditError.message);
+    }
+
+    // 6. Respuesta exitosa
+    res.status(201).json({
+      success: true,
+      message: "Usuario registrado exitosamente",
+      userId: userCreated.user_id,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   login,
   forgotPassword,
   verifyOtp,
   resetPassword,
+  register,
 };

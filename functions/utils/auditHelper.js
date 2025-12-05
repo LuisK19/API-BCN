@@ -180,6 +180,27 @@ const logCardMovementAdd = async (userId, cardId, movementDetails) => {
   );
 };
 
+/**
+ * Registra un registro público de usuario (sin actor, el usuario se registra a sí mismo)
+ * @param {string} userId - UUID del usuario creado
+ * @param {object} req - Request object para obtener IP
+ * @return {Promise<number>}
+ */
+const logRegister = async (userId, req) => {
+  const ip = req.ip || (req.connection && req.connection.remoteAddress);
+  return logAudit(
+      AuditAction.CREATE,
+      AuditEntity.USUARIO,
+      userId, // El usuario se crea a sí mismo
+      userId, // Entidad afectada es el mismo usuario
+      {
+        ip: ip,
+        userAgent: req.headers["user-agent"],
+        registroPublico: true,
+      },
+  );
+};
+
 module.exports = {
   // Función principal
   logAudit,
@@ -190,6 +211,7 @@ module.exports = {
 
   // Helpers específicos
   logLogin,
+  logRegister,
   logAccountCreate,
   logTransfer,
   logViewSensitiveData,

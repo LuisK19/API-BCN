@@ -2,16 +2,19 @@
 // Generador de IBAN para Costa Rica y función de validación en API
 
 /**
- * Genera un IBAN válido para Costa Rica (CR + 2 dígitos de control + 18 dígitos)
- * El formato oficial es: CRkk BBBB CCCC CCCC CCCC CC
- * Donde BBBB es el código de banco (6 dígitos), CCCC... es el número de cuenta (12 dígitos)
+ * Genera un IBAN válido para Costa Rica siguiendo el estándar del Banco Central
+ * Formato: CR01BXX + 12 dígitos
+ * CR = País (Costa Rica)
+ * 01 = Identificador interno fijo
+ * B02 = Código del banco (Banca Capital Nacional)
+ * XXXXXXXXXXXX = 12 dígitos únicos de la cuenta
  */
 function generarIbanCR() {
   const pais = 'CR';
-  const control = Math.floor(10 + Math.random() * 90); // 2 dígitos de control
-  const entidad = '000100'; // ejemplo: código banco (6 dígitos, puedes cambiarlo)
-  const cuenta = String(Math.floor(Math.random() * 1e12)).padStart(12, '0'); // 12 dígitos
-  return `${pais}${control}${entidad}${cuenta}`;
+  const control = '01'; // Identificador interno fijo según estándar
+  const banco = 'B02'; // Banca Capital Nacional
+  const cuenta = String(Math.floor(Math.random() * 1e12)).padStart(12, '0'); // 12 dígitos aleatorios
+  return `${pais}${control}${banco}${cuenta}`;
 }
 
 /**

@@ -30,6 +30,7 @@ const cardsRoutes = require("./routes/cards");
 const transfersRoutes = require("./routes/transfers");
 const bankRoutes = require("./routes/bank");
 const auditRoutes = require("./routes/audit");
+const tiposIdentificacionRoutes = require("./routes/tiposIdentificacion");
 const errorMiddleware = require("./middlewares/errorMiddleware");
 
 const app = express();
@@ -48,6 +49,7 @@ app.use("/api/v1/cards", cardsRoutes);
 app.use("/api/v1/transfers", transfersRoutes);
 app.use("/api/v1/bank", bankRoutes);
 app.use("/api/v1/audit", auditRoutes);
+app.use("/api/v1/tipos-identificacion", tiposIdentificacionRoutes);
 app.get("/api/v1/health", (req, res) => {
   res.json({
     status: "OK",

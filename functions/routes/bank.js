@@ -11,4 +11,16 @@ const jwtMiddleware = require("../middlewares/authMiddleware").jwtMiddleware;
  */
 router.post("/validate-account", bankController.validateAccount);
 
+/**
+ * GET /api/v1/bank/ping-central
+ * Verificar si el Banco Central está disponible
+ */
+router.get("/ping-central", bankController.pingCentralBank);
+
+/**
+ * GET /api/v1/bank/websocket-status
+ * Verificar estado de la conexión WebSocket
+ */
+router.get("/websocket-status", bankController.checkWebSocketStatus);
+
 module.exports = router;
